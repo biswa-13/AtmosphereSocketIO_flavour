@@ -1,0 +1,7 @@
+/target/classes/org/saravato_atmos/managed/JacksonDecoder.class
+/src/main/java/org/saravato_atmos/managed/JacksonDecoder.java
+.idea
+.settings
+.classpath
+.project
+target
