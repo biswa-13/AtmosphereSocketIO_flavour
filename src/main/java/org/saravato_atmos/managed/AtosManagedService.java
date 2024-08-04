@@ -2,14 +2,9 @@ package org.saravato_atmos.managed;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.util.JSONPObject;
-import org.atmosphere.config.service.Disconnect;
-import org.atmosphere.config.service.ManagedService;
-import org.atmosphere.config.service.Ready;
+import org.atmosphere.config.service.*;
 import org.atmosphere.config.service.Message;
-import org.atmosphere.cpr.AtmosphereResource;
-import org.atmosphere.cpr.AtmosphereResourceEvent;
-import org.atmosphere.cpr.Broadcaster;
+import org.atmosphere.cpr.*;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,99 +12,124 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
-@ManagedService(path = "/websocket/chat")
+@ManagedService(path = "/websocket/*")
 public class AtosManagedService {
 
 	private final Logger logger = LoggerFactory.getLogger(AtosManagedService.class);
 	private final ObjectMapper mapper = new ObjectMapper();
-	private final ConcurrentHashMap<String, AtmosphereResource> connectedClients = new ConcurrentHashMap<>();
+	private final ConcurrentMap<String, ConcurrentMap<String, Broadcaster>> namespaces = new ConcurrentHashMap<>();
+	private BroadcasterFactory broadcasterFactory;
+
 	@Ready
 	public void onReady(final AtmosphereResource r) {
-		System.out.println("Client {} connected."+ r.uuid());
+		this.broadcasterFactory = r.getAtmosphereConfig().getBroadcasterFactory();
+		logger.info("Client {} connected.", r.uuid());
 
-		// Store the connected client details for further usage
-		connectedClients.put(r.uuid(), r);
+		String namespace = getNamespace(r);
+		String room = getRoom(r);
 
-		// emitting a custom event to the client
-		emit(r, "Client Info", "Client Identification: "+r.uuid());
+		Broadcaster broadcaster = getOrCreateBroadcaster(namespace, room);
+		broadcaster.addAtmosphereResource(r);
+
+		emit(broadcaster, "Client Info", "Client connected: " + r.uuid());
 	}
 
 	@Disconnect
 	public void onDisconnect(AtmosphereResourceEvent event) {
-		if (event.isCancelled()) {
-			System.out.println("Client {} unexpectedly disconnected"+event.getResource().uuid());
-		} else if (event.isClosedByClient()) {
-			System.out.println("Client {} closed the connection"+ event.getResource().uuid());
-		}
+		AtmosphereResource r = event.getResource();
+		String namespace = getNamespace(r);
+		String room = getRoom(r);
 
-		// Remove the disconnected client
-		connectedClients.remove(event.getResource().uuid());
+		Broadcaster broadcaster = getOrCreateBroadcaster(namespace, room);
+		broadcaster.removeAtmosphereResource(r);
 
-		// emitting a custom event to the client
-		emit(event.getResource(), "Disconnect Info", "Client Disconnected with ID:"+event.getResource().uuid());
+		emit(broadcaster, "Disconnect Info", "Client disconnected: " + r.uuid());
 	}
 
 	@Message
-	public String onMessage(String message) {
-		System.out.println("Received message: {}"+ message);
-
-		// Process custom events from the client
-		if(message.contains("CustomEvent")) {
-			String customEvent = message.substring("CustomEvent".length());
-			try {
+	public void onMessage(AtmosphereResource atmosphereResource, String message) {
+		try {
+			System.out.println("onMessage() is called ...");
+			if (!message.contains("fromServer")) {
+				logger.info("Received message: {}", message);
+				String namespace = getNamespace(atmosphereResource);
+				String room = getRoom(atmosphereResource);
+				Map<String, String> respObbj = new HashMap<>();
+				String result = "";
+				// Parse the incoming message as JSON
 				JsonNode jsonNode = mapper.readTree(message);
-				String eventName = jsonNode.get("CustomEvent").asText();
-				JsonNode data = jsonNode.get("data");
-				System.out.println("Received custom event: {}, with data: {}"+ eventName+ data);
+				if(jsonNode.has("CustomEvent")) {
+					String eventName = jsonNode.get("CustomEvent").asText();
+					JsonNode data = jsonNode.get("data");
+					// Execute custom logic based on the event name
+					respObbj.put("message", executeCustomLogic(eventName, data));
+				} else {
+					result = jsonNode.get("message").toString();
+					respObbj.put("fromServer", "true");
+					respObbj.put("message", result);
+				}
 
-				// Execute custom events triggered from the client, based on the event name and data and broadcast a response/result
-				return onEmit(eventName, data);
+				// Retrieve the correct broadcaster
+				Broadcaster broadcaster = getOrCreateBroadcaster(namespace, room);
 
-			} catch (Exception ex) {
-				System.out.println("Failed to process message: {}"+ message+ ex);
-				return "Error processing message";
+				// Prevent broadcasting the same message back and forth
+				//if (!message.contains("fromServer")) {
+				broadcaster.broadcast(mapper.writeValueAsString(respObbj));
+				//}
 			}
-		} else {
-			// Echo the message back to the client
-			return message;
+		} catch (Exception e) {
+			logger.error("Failed to process message: {}", message, e);
 		}
 	}
 
-	// responsible for responding to the custom event triggered from the client
-	public String onEmit(String eventName, JsonNode data) {
-		String result = "";
-		try {
-			System.out.println("executeCustomLogic() is called for event:"+eventName);
-			if(eventName.equalsIgnoreCase("getServerTime")) {
-				result = this.onGetServerTime(data);
-			}
-		} catch (Exception e) {
-			System.out.println("Exception occurred -->"+e.getCause());
-        }
-		return result;
+	private String executeCustomLogic(String eventName, JsonNode data) {
+		System.out.println("executeCustomLogic() is called ...");
+		// Implement your custom logic here based on the event name
+		switch (eventName) {
+			case "getServerTime":
+				return onGetServerTime(data);
+			case "customEvent":
+				return "Handled custom event with data: " + data.toString();
+			default:
+				return "Unknown event: " + eventName;
+		}
 	}
 
-	public String onGetServerTime(JsonNode data) {
+	private String onGetServerTime(JsonNode data) {
+		System.out.println("onGetServerTime() is called ...");
 		// Get current date and time in the server's timezone
 		LocalDateTime localDateTime = LocalDateTime.now(ZoneId.systemDefault());
-
-		// Format the date and time as you need
+		// Format the date and time as needed
 		DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-		System.out.println("getServerTime() called -->"+localDateTime.format(dateTimeFormatter));
-		JSONObject jsonObject = new JSONObject();
-		return jsonObject.put("message", localDateTime.format(dateTimeFormatter)).toString();
+		return "{\"serverTime\":\"" + localDateTime.format(dateTimeFormatter) + "\"}";
 	}
 
-	public void emit(AtmosphereResource resource, String eventName, String message){
-		String eventJson = String.format("{\"CustomEvent\":\"%s\",\"data\":\"%s\"}", eventName, message);
-		connectedClients.values().forEach(item -> {
-			Broadcaster broadcaster = item.getBroadcaster();
-			broadcaster.broadcast(eventJson);
-		});
-		//resource.getBroadcaster().broadcast(eventJson);
-		System.out.println("Emitted event {} with message: {}"+ eventName+ message);
+	private Broadcaster getOrCreateBroadcaster(String namespace, String room) {
+		return namespaces
+				.computeIfAbsent(namespace, ns -> new ConcurrentHashMap<>())
+				.computeIfAbsent(room, rm -> broadcasterFactory.lookup(namespace + "/" + room, true));
+	}
+
+	private String getNamespace(AtmosphereResource r) {
+		String[] pathParts = r.getRequest().getRequestURI().split("/");
+		return pathParts.length >= 4 ? pathParts[2] : "defaultNamespace";
+	}
+
+	private String getRoom(AtmosphereResource r) {
+		String[] pathParts = r.getRequest().getRequestURI().split("/");
+		return pathParts.length >= 4 ? pathParts[3] : "defaultRoom";
+	}
+
+	private void emit(Broadcaster broadcaster, String eventName, String message) {
+		System.out.println("emit() is called // event name -->"+eventName);
+		String eventJson = String.format("{\"CustomEvent\":\"%s\", \"fromServer\":\"true\" ,\"data\":\"%s\"}", eventName, message);
+		broadcaster.broadcast(eventJson);
+		logger.info("Emitted event {} with message: {}", eventName, message);
 	}
 }

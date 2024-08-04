@@ -6,97 +6,63 @@
     <script type="text/javascript" src="javascript/atmosphere.js"></script>
     <script type="text/javascript" src="javascript/jquery-2.0.3.js"></script>
     <script type="text/javascript" src="javascript/application.js"></script>
+	<style>
+		.container {
+			display: flex;
+			background-color: #55BA5D
+		}
+		.namespace1, .namespace2 {
+			width: 50%;
+		}
+
+	</style>
 </head>
 <body>
-
-	<div style="background-color:aliceblue;border: 2px solid gray; padding: 3%;">
-		<h2>Atmosphere Demo</h2>
-		<div style="background-color:gray;  width: 260;align-content: center;padding: 20px;">
-			<h3> <b>System Info</b></h3>
-			<span id="sysInfoDiv">
+	<h2 style="color: #FFC300; text-align:center">Atmosphere Demo in Socket IO Style</h2>
+	<hr>
+	<div class="container" >
+		<div class="namespace1" style="background-color:#f3f9f7;border: 2px solid Blue; padding: 3%;">
+			<div style="background-color:gray;  width: 260;align-content: center;padding: 20px;">
+				<h3> <b>System Info: Namespace: Blue, Room: BlueBoyz</b></h3>
+				<span id="sysInfoDiv">
 			</span>
-			<hr/>
-			<span><button id="connectBtn" onClick="connect()" style="background-color:green">Connect</button></span>
-			<span><input type="text" id="msgBox" /></span>
-			<span><button id="msgBtn" onClick = "sendMessage()" style="background-color:orange">Push Message</button></span>
-			<span><button id="cstmEvntBtn" onClick = "triggerCustomEvent()" style="background-color:cyan">Trigger Custom Event</button></span>
-			<span><button id="closeBtn" onClick = "close()" style="background-color:purple">Close</button></span>
-			<span><button id="disConnectBtn" onClick = "disconnect()" style="background-color:red">Disconnect</button></span>
+				<hr/>
+				<span><button id="connectBtn" onClick="connect()" style="background-color:green">Connect</button></span>
+				<span><input type="text" id="msgBox" /></span>
+				<span><button id="msgBtn" onClick = "sendMessage()" style="background-color:orange">Push Message</button></span>
+				<span><button id="cstmEvntBtn" onClick = "triggerCustomEvent()" style="background-color:cyan">Trigger Custom Event</button></span>
+				<span><button id="closeBtn" onClick = "close()" style="background-color:purple">Close</button></span>
+				<span><button id="disConnectBtn" onClick = "disconnect()" style="background-color:red">Disconnect</button></span>
 
-		</div>
-		<div style="width: 300; margin-top:20px;">
+			</div>
+			<div style="width: 300; margin-top:20px;">
 
-			<div style="border: 1px solid blue; width: 300; min-height:200px; margin-top:20px;" id="chatBox">
+				<div style="border: 1px solid blue; width: 300; min-height:200px; margin-top:20px;" id="chatBox">
+				</div>
 			</div>
 		</div>
+
+		<!-- Second Namespace Panel-->
+		<div class="namespace2" style="background-color:#f8ebeb;border: 2px solid red; padding: 3%;">
+			<div style="background-color:gray;  width: 260;align-content: center;padding: 20px;">
+				<h3> <b>System Info: Namespace: Red, Room: RedChillyz</b></h3>
+				<span id="sysInfoDiv1">
+			</span>
+				<hr/>
+				<span><button id="connectBtn1" onClick="connect1()" style="background-color:green">Connect</button></span>
+				<span><input type="text" id="msgBox1" /></span>
+				<span><button id="msgBtn1" onClick = "sendMessage1()" style="background-color:orange">Push Message</button></span>
+				<span><button id="cstmEvntBtn1" onClick = "triggerCustomEvent1()" style="background-color:cyan">Trigger Custom Event</button></span>
+				<span><button id="closeBtn1" onClick = "close1()" style="background-color:purple">Close</button></span>
+				<span><button id="disConnectBtn1" onClick = "disconnect1()" style="background-color:red">Disconnect</button></span>
+			</div>
+			<div style="width: 300; margin-top:20px;">
+				<div style="border: 1px solid blue; width: 300; min-height:200px; margin-top:20px;" id="chatBox1">
+				</div>
+			</div>
+		</div>
+
 	</div>
 
 </body>
 </html>
-
-<!-- -------------------------------------------------------  -->
-<!--<!DOCTYPE html>-->
-<!--<html lang="en">-->
-<!--<head>-->
-<!--	<meta charset="UTF-8">-->
-<!--	<title>Atmosphere Chat</title>-->
-<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>-->
-<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/atmosphere/2.3.7/atmosphere.js"></script>-->
-<!--</head>-->
-<!--<body>-->
-<!--<h1>Atmosphere Chat</h1>-->
-<!--<div>-->
-<!--	<input type="text" id="messageInput" placeholder="Enter your message here...">-->
-<!--	<button id="sendButton">Send</button>-->
-<!--</div>-->
-<!--<div id="chatBox" style="border:1px solid black; width: 300px; height: 200px; overflow: auto;">-->
-<!--</div>-->
-
-<!--<script>-->
-<!--	$(document).ready(function() {-->
-<!--        var socket = atmosphere;-->
-<!--        var request = {-->
-<!--            url: 'ws://localhost:8069/websocket/chat',-->
-<!--            contentType : "application/json",-->
-<!--            logLevel : 'debug',-->
-<!--            transport : 'websocket',-->
-<!--            trackMessageLength : true,-->
-<!--            reconnectInterval : 5000-->
-<!--        };-->
-
-<!--        request.onOpen = function(response) {-->
-<!--            $('#chatBox').append('<p>Connected to the chat server.</p>');-->
-<!--        };-->
-
-<!--        request.onMessage = function (response) {-->
-<!--            var message = response.responseBody;-->
-<!--            try {-->
-<!--                var json = JSON.parse(message);-->
-<!--            } catch (e) {-->
-<!--                console.log('Invalid JSON: ', message);-->
-<!--                return;-->
-<!--            }-->
-<!--            $('#chatBox').append('<p>' + json.message + '</p>');-->
-<!--        };-->
-
-<!--        request.onClose = function(response) {-->
-<!--            $('#chatBox').append('<p>Disconnected from the chat server.</p>');-->
-<!--        };-->
-
-<!--        request.onError = function(response) {-->
-<!--            $('#chatBox').append('<p>Sorry, but there\'s some problem with your socket or the server is down</p>');-->
-<!--        };-->
-
-<!--        var subSocket = socket.subscribe(request);-->
-
-<!--        $('#sendButton').click(function() {-->
-<!--            var message = $('#messageInput').val();-->
-<!--            if (message) {-->
-<!--                subSocket.push(JSON.stringify({ message: message }));-->
-<!--                $('#messageInput').val('');-->
-<!--            }-->
-<!--        });-->
-<!--    });-->
-<!--</script>-->
-<!--</body>-->
-<!--</html>-->
