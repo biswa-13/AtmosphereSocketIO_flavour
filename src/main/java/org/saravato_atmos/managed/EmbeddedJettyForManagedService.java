@@ -1,14 +1,9 @@
 package org.saravato_atmos.managed;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.EnumSet;
-
+import jakarta.servlet.DispatcherType;
 import org.atmosphere.cpr.ApplicationConfig;
-import org.atmosphere.cpr.AtmosphereServlet;
-import org. atmosphere. cpr. AtmosphereServlet.*;
 import org.atmosphere.cpr.AtmosphereFramework;
+import org.atmosphere.cpr.AtmosphereServlet;
 import org.atmosphere.interceptor.HeartbeatInterceptor;
 import org.eclipse.jetty.ee10.servlet.DefaultServlet;
 import org.eclipse.jetty.ee10.servlet.FilterHolder;
@@ -22,9 +17,9 @@ import org.eclipse.jetty.util.resource.ResourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.DispatcherType;
-
-import static org.atmosphere.cpr.Universe.framework;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.EnumSet;
 
 public class EmbeddedJettyForManagedService {
     private static final Logger log = LoggerFactory.getLogger(EmbeddedJettyForManagedService.class);
@@ -37,7 +32,7 @@ public class EmbeddedJettyForManagedService {
         Server server = new Server();
         ServerConnector connector = new ServerConnector(server);
         connector.setIdleTimeout(60000); // 1 minute
-        connector.setPort(8069);
+        connector.setPort(8071);
         server.addConnector(connector);
 
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -52,7 +47,7 @@ public class EmbeddedJettyForManagedService {
         context.addFilter(corsFilterHolder, "/*", EnumSet.allOf(DispatcherType.class));
 
         // Set the base resource path
-        Path resourceBasePath = Paths.get("C:\\Users\\bichh\\eclipse-workspace\\JavaPrac\\saravato_atmos\\src\\main\\webapp");
+        Path resourceBasePath = Paths.get("C:\\Users\\bichh\\eclipse-workspace\\JavaPrac\\v3.x_POC_saravato_atmos\\src\\main\\webapp");
         context.setBaseResource(ResourceFactory.root().newResource(resourceBasePath.toUri()));
 
         // Add DefaultServlet to serve static content

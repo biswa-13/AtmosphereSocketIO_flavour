@@ -1,4 +1,4 @@
-var chatUrl = 'ws://localhost:8069/websocket/Blue/BlueBoyz';
+var chatUrl = 'ws://localhost:8071/websocket/Blue/BlueBoyz';
 var socket = atmosphere;
 var subSocket;
 var request = {
